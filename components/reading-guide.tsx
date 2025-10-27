@@ -20,15 +20,23 @@ export function ReadingGuide() {
 
   if (!settings.readingGuide) return null
 
-  return (
-    <div
-      className="fixed left-0 right-0 pointer-events-none z-50"
-      style={{
-        top: position - 2,
-        height: "4px",
-        background: "linear-gradient(to bottom, transparent, rgba(147, 51, 234, 0.3), transparent)",
-        boxShadow: "0 0 20px rgba(147, 51, 234, 0.5)",
-      }}
-    />
-  )
+ const ACCENT_COLOR = 'rgba(0, 255, 255, 0.9)'; 
+const BAND_COLOR = 'rgba(230, 230, 255, 0.2)'; 
+
+return (
+  <div
+    
+    className="fixed left-0 right-0 pointer-events-none z-50 transition-all duration-75 ease-out"
+    style={{
+      
+      top: position - 10, 
+      height: "20px", 
+      background: BAND_COLOR, 
+    
+      borderTop: `1px solid ${ACCENT_COLOR}`,
+      borderBottom: `1px solid ${ACCENT_COLOR}`, 
+      boxShadow: `0 0 15px ${ACCENT_COLOR}`,
+    }}
+  />
+)
 }
