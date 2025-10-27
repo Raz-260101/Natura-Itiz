@@ -41,73 +41,107 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     screenReader: false,
   })
 
-  const updateSetting = <K extends keyof AccessibilitySettings>(key: K, value: AccessibilitySettings[K]) => {
-    setSettings((prev) => ({ ...prev, [key]: value }))
-  }
+ const [announcerCreated, setAnnouncerCreated] = useState(false);
+  
+  const updateSetting = <K extends keyof AccessibilitySettings>(key: K, value: AccessibilitySettings[K]) => {
+    setSettings((prev) => ({ ...prev, [key]: value }))
+  }
+  
+    const announce = (message: string) => {
+   
+    if (settings.screenReader && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      const voices = window.speechSynthesis.getVoices();
+      const spanishVoice = voices.find(
+          (voice) => voice.lang.startsWith('es')
+      );
+      if (spanishVoice) {
+          utterance.voice = spanishVoice;
+          utterance.rate = 0.9; 
+      }
+      window.speechSynthesis.speak(utterance);
+    }
+    
+    const announcer = document.getElementById("accessibility-announcer")
+    if (announcer) {
+      announcer.textContent = message
+      setTimeout(() => {
+        announcer.textContent = ""
+      }, 1000)
+    }
+  }
+  
+  useEffect(() => {
+    const root = document.documentElement
 
-  const announce = (message: string) => {
-    if (settings.screenReader) {
-      const announcer = document.getElementById("accessibility-announcer")
-      if (announcer) {
-        announcer.textContent = message
-        setTimeout(() => {
-          announcer.textContent = ""
-        }, 1000)
-      }
-    }
-  }
+    if (settings.contrast > 0) {
+      const contrastValue = 1 + settings.contrast / 100
+      document.body.style.filter = `contrast(${contrastValue}) ${settings.grayscale > 0 ? `grayscale(${settings.grayscale}%)` : ""}`
+    } else if (settings.grayscale > 0) {
+      document.body.style.filter = `grayscale(${settings.grayscale}%)`
+    } else {
+      document.body.style.filter = ""
+    root.style.fontSize = `${settings.fontSize}%`
+}
+    if (settings.nightMode) {
+      root.classList.add("dark")
+    } else {
+      root.classList.remove("dark")
+    }
 
-  useEffect(() => {
-    const root = document.documentElement
+    if (settings.typography && settings.typography !== "default") {
+      root.style.fontFamily = settings.typography
+    } else {
+      root.style.fontFamily = ""
+    }
 
-    if (settings.contrast > 0) {
-      const contrastValue = 1 + settings.contrast / 100
-      document.body.style.filter = `contrast(${contrastValue}) ${settings.grayscale > 0 ? `grayscale(${settings.grayscale}%)` : ""}`
-    } else if (settings.grayscale > 0) {
-      document.body.style.filter = `grayscale(${settings.grayscale}%)`
-    } else {
-      document.body.style.filter = ""
-    }
-
-    root.style.fontSize = `${settings.fontSize}%`
-
-    // Night mode (dark mode)
-    if (settings.nightMode) {
-      root.classList.add("dark")
-    } else {
-      root.classList.remove("dark")
-    }
-
-    if (settings.typography && settings.typography !== "default") {
-      root.style.fontFamily = settings.typography
-    } else {
-      root.style.fontFamily = ""
-    }
-
-    if (settings.screenReader) {
-      const announcement = document.createElement("div")
-      announcement.setAttribute("role", "status")
-      announcement.setAttribute("aria-live", "polite")
-      announcement.setAttribute("aria-atomic", "true")
-      announcement.className = "sr-only"
-      announcement.id = "accessibility-announcer"
+    if (settings.screenReader && !announcerCreated) {
       if (!document.getElementById("accessibility-announcer")) {
+        const announcement = document.createElement("div")
+        announcement.setAttribute("role", "status")
+        announcement.setAttribute("aria-live", "polite")
+        announcement.setAttribute("aria-atomic", "true")
+        announcement.className = "sr-only"
+        announcement.id = "accessibility-announcer"
+        
         document.body.appendChild(announcement)
       }
-    }
-  }, [settings])
+  
+      setAnnouncerCreated(true);
+    }
+    
+  }, [settings, announcerCreated]) 
 
-  return (
-    <AccessibilityContext.Provider value={{ settings, updateSetting, announce }}>
-      {children}
-    </AccessibilityContext.Provider>
-  )
+  useEffect(() => {
+    
+    if ('speechSynthesis' in window) {
+      
+      const loadVoices = () => {
+        
+        const voices = window.speechSynthesis.getVoices();
+        console.log(`Voces cargadas: ${voices.length}`); 
+      };
+      if (window.speechSynthesis.getVoices().length > 0) {
+        loadVoices();
+      }
+      window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+      return () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+      };
+    }
+  }, []); 
+  return (
+    <AccessibilityContext.Provider value={{ settings, updateSetting, announce }}>
+      {children}
+    </AccessibilityContext.Provider>
+  )
 }
 
 export function useAccessibility() {
-  const context = useContext(AccessibilityContext)
-  if (context === undefined) {
-    throw new Error("useAccessibility must be used within an AccessibilityProvider")
-  }
-  return context
+  const context = useContext(AccessibilityContext)
+  if (context === undefined) {
+    throw new Error("useAccessibility must be used within an AccessibilityProvider")
+  }
+  return context
 }
